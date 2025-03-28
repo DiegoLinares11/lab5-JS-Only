@@ -7,7 +7,148 @@
 </head>
 <body>
     <script type="application/javascript">
-        // Aquí irá todo el código
-      </script>  
-</body>
+      document.addEventListener('DOMContentLoaded', () => {
+        const API_URL = "https://chat.devng.online/chats"; // URL para la API
+        let messagesContainer, inputField, sendButton, themeButton;
+        let isDarkMode = localStorage.getItem("darkMode") === "true";
+        const username = "Usuario"; // Nombre de usuario predeterminado (puedes cambiarlo)
+
+        // Inicializamos la interfaz
+        function createUI() {
+          // Contenedor de los mensajes
+          messagesContainer = document.createElement("div");
+          messagesContainer.style.width = "100%";
+          messagesContainer.style.height = "calc(100vh - 60px)";
+          messagesContainer.style.overflowY = "scroll";
+          messagesContainer.style.padding = "10px";
+          document.body.appendChild(messagesContainer);
+
+          // Campo de texto
+          inputField = document.createElement("input");
+          inputField.type = "text";
+          inputField.maxLength = 140;
+          inputField.placeholder = "Escribe tu mensaje...";
+          inputField.style.position = "fixed";
+          inputField.style.bottom = "10px";
+          inputField.style.width = "100%";
+          inputField.style.padding = "10px";
+          inputField.style.fontSize = "16px";
+          inputField.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+              sendMessage(inputField.value);
+              inputField.value = ''; // Limpiar el campo de texto
+            }
+          });
+          document.body.appendChild(inputField);
+
+          // Botón de cambio de tema
+          themeButton = document.createElement("button");
+          themeButton.innerText = "Cambiar Tema";
+          themeButton.style.position = "absolute";
+          themeButton.style.top = "10px";
+          themeButton.style.right = "10px";
+          themeButton.addEventListener("click", toggleTheme);
+          document.body.appendChild(themeButton);
+
+          // Inicializar el tema
+          updateTheme();
+        }
+
+        // Función para actualizar el tema
+        function updateTheme() {
+          if (isDarkMode) {
+            document.body.style.backgroundColor = "#333";
+            document.body.style.color = "white";
+          } else {
+            document.body.style.backgroundColor = "#f4f4f4";
+            document.body.style.color = "black";
+          }
+        }
+
+        // Cambiar el tema
+        function toggleTheme() {
+          isDarkMode = !isDarkMode;
+          localStorage.setItem("darkMode", isDarkMode);
+          updateTheme();
+        }
+
+        // Función para enviar mensaje  
+        async function sendMessage(text) {
+          if (text.trim() === "") return;
+
+          // Enviar el mensaje al servidor con el username
+          const messageData = {
+            username: username,
+            message: text
+          };
+
+          try {
+            await fetch(API_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(messageData),
+            });
+            fetchMessages(); // Recargar los mensajes después de enviar
+          } catch (error) {
+            console.error("Error al enviar el mensaje", error);
+          }
+        }
+
+        // Función para cargar mensajes
+        async function fetchMessages() {
+          try {
+            const response = await fetch(API_URL);
+            const messages = await response.json();
+            displayMessages(messages);
+          } catch (error) {
+            console.error("Error al obtener los mensajes", error);
+          }
+        }
+
+        // Función para mostrar los mensajes
+        function displayMessages(messages) {
+          messagesContainer.innerHTML = ''; // Limpiar el contenedor antes de agregar nuevos mensajes
+          messages.forEach(message => {
+            const messageElement = document.createElement("div");
+            messageElement.style.marginBottom = "10px";
+
+            // Mostrar el nombre de usuario y el mensaje
+            const userAndMessage = document.createElement("p");
+            userAndMessage.textContent = `${message.username}: ${message.message}`;
+            messageElement.appendChild(userAndMessage);
+
+            // Verificar si hay una imagen o enlace
+            const imgMatch = message.message.match(/https?:\/\/.*\.(jpg|jpeg|png|gif)/);
+            if (imgMatch) {
+              const imgPreview = document.createElement("img");
+              imgPreview.src = imgMatch[0];
+              imgPreview.style.maxWidth = "100px";
+              imgPreview.style.maxHeight = "100px";
+              messageElement.appendChild(imgPreview);
+            }
+
+            const urlMatch = message.message.match(/https?:\/\/\S+/);
+            if (urlMatch) {
+              const linkPreview = document.createElement("a");
+              linkPreview.href = urlMatch[0];
+              linkPreview.textContent = urlMatch[0];
+              messageElement.appendChild(linkPreview);
+            }
+
+            messagesContainer.appendChild(messageElement);
+          });
+
+          // Mantener el scroll en la parte inferior
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Cargar mensajes al inicio y refrescar cada 5 segundos
+        fetchMessages();
+        setInterval(fetchMessages, 5000);
+
+        // Iniciar la UI
+        createUI();
+      });
+    </script>
+  </body>
 </html>
